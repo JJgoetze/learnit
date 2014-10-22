@@ -11,8 +11,12 @@
 #include "service/example_opcode_def.h"
 #include "service/example_pimpl.h"
 
-
-
+class PlayerMoneyCmp{
+public:
+	bool inline operator () (const Player *p1, const Player *p2) const{
+		return p1->money > p2->money;
+	}
+};
 
 GameExampleServicePimpl::GameExampleServicePimpl(rapidjson::Value& config) 
 {
@@ -22,6 +26,14 @@ GameExampleServicePimpl::GameExampleServicePimpl(rapidjson::Value& config)
 }
 
 GameExampleServicePimpl::~GameExampleServicePimpl() {
+	PlayerRoom* del;
+
+	for (std::vector<PlayerRoom*>::iterator it = player_rooms.begin();
+		it != player_rooms.end();){
+		del = *it;
+		++it;
+		delete del;
+	}
 }
 
 bool GameExampleServicePimpl::Init() {
@@ -63,6 +75,27 @@ Player*  GameExampleServicePimpl::FindPlayerBySessionId(std::string session_id){
     }
 }
 
+PlayerRoom*  GameExampleServicePimpl::GetBestRoom(){
+	int index = -1;
+
+	int i = 0;
+	for (i; i < player_rooms.size(); ++i){
+		if ( !player_rooms[i]->IsFull()){
+			index = i;
+			break;
+		}
+	}
+
+	for (i; i < player_rooms.size(); ++i){
+		if (player_rooms[i]->GetRestCount() < player_rooms[index]->GetRestCount())
+			index = i;
+	}
+
+	if (index > 0 && index < player_rooms.size())
+		return player_rooms[index];
+	else
+		return NULL;
+}
 
 //进入房间 
 int32_t  GameExampleServicePimpl::HandleEnterRoom(TcpConnection* conn, PacketTranscode& request){
@@ -88,6 +121,15 @@ int32_t  GameExampleServicePimpl::HandleEnterRoom(TcpConnection* conn, PacketTra
 
         session_player_map_[conn->GetSessionId()] = player;
 
+		PlayerRoom* player_room = GetBestRoom();
+		if (player_room != NULL)
+			player_room->AssignPlayerId(player->account_id);
+		else{
+			player_room = new PlayerRoom;
+			player_rooms.push_back(player_room);
+			player_room->AssignPlayerId(player->account_id);
+		}
+
         //发送给客户端进入房间成功
        PacketTranscode packet;
        packet.SetOpcode(RampupOpCode::SMSG_ENTER_ROOM_RESP);
@@ -100,6 +142,7 @@ int32_t  GameExampleServicePimpl::HandleEnterRoom(TcpConnection* conn, PacketTra
        return  0; 
     }
 }
+
 //离开房间
 int32_t  GameExampleServicePimpl::HandleLeaveRoom(TcpConnection* conn, PacketTranscode& request){
     Player* p = FindPlayerBySessionId(conn->GetSessionId());
@@ -114,8 +157,23 @@ int32_t  GameExampleServicePimpl::HandleLeaveRoom(TcpConnection* conn, PacketTra
 
         return  -1; 
     } else {
+		for (std::vector<PlayerRoom*>::iterator it = player_rooms.begin();
+			it != player_rooms.end(); ){
+			if ((*it)->IsExistPlayerId(p->account_id)){
+				(*it)->RemovePlayerId(p->account_id);
 
-        PacketTranscode packet;
+				if ((*it)->IsEmpty()){
+					delete *it;
+					player_rooms.erase(it);
+				}
+				break;
+			}
+			else {
+				++it;
+			}
+		}
+
+		PacketTranscode packet;
         packet.SetOpcode(RampupOpCode::SMSG_LEAVE_ROOM_RESP);
 
         LeaveRoomResp  leave_room_resp;
@@ -137,15 +195,25 @@ int32_t  GameExampleServicePimpl::HandleQueryTop20ByMoney(TcpConnection* conn, P
     int top_index = 0;
      
     QueryTop20ByMoneyResp   query_resp; 
+	std::vector<Player*> players;
+
     std::map<std::string, Player*>::iterator iter =  session_player_map_.begin(); 
     for (iter; iter != session_player_map_.end(); ++iter){
-	    top_index ++;
-        if (top_index < 20){
-            query_resp.players.push_back(*iter->second);
-        } else {
-            break; 
-        }
+		players.push_back(iter->second);
     }
+
+	sort(players.begin(), players.end(), PlayerMoneyCmp());
+
+	std::vector<Player*>::iterator it = players.begin();
+	for (it; it != players.end(); ++it){
+		top_index ++;
+		if (top_index < 20){
+			query_resp.players.push_back(**it);
+		} else {
+			break;
+		}
+	}
+
     PacketTranscode packet;
     packet.SetOpcode(RampupOpCode::SMSG_QUERY_TOP20_RESP);
     query_resp.ToPacket(packet); 
@@ -153,6 +221,7 @@ int32_t  GameExampleServicePimpl::HandleQueryTop20ByMoney(TcpConnection* conn, P
 
     return  0;
 }	
+
 //查询某个账号是否被封
 int32_t  GameExampleServicePimpl::HandleQueryAccountBeForbidened(TcpConnection* conn, PacketTranscode& request){
     AccountForbidenReq    req; 
@@ -164,6 +233,8 @@ int32_t  GameExampleServicePimpl::HandleQueryAccountBeForbidened(TcpConnection* 
     packet.SetOpcode(RampupOpCode::SMSG_QUERY_ACCOUNT_BE_FORBIDDENED_RESP);
    
     AccountForbidenResp resp; 
+
+
     resp.ToPacket(packet); 
 
     conn->Write(packet);
@@ -194,13 +265,3 @@ int32_t GameExampleServicePimpl::OnConnClosed(TcpConnection* conn) {
     }
     return  0; 
 }
-
-
-
-
-
-
-
-
-
-
