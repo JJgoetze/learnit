@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
 		SetDefaultLogger(&log4cplus_logger); 
 
 		int port = 7011;
-		LOG(INFO) << "starting on port " << port << "...";
+		//LOG(INFO) << "starting on port " << port << "...";
 		LOG(INFO) << "server is running...";
 		FILE* configFile = fopen("../conf/conf.txt", "r");
 		if (configFile == nullptr) {

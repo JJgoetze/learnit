@@ -8,6 +8,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <fstream>
 
 #include "service/example_def.h"
 #include "service/example_opcode_def.h"
@@ -20,7 +21,8 @@ class PlayerRoom{
 public:
 	PlayerRoom():capacity_(5){}
 	PlayerRoom(int32_t cap) : capacity_(cap){}
-	
+	virtual ~PlayerRoom(){}
+
 	//判断房间是否已经满员
 	bool IsFull(){
 		return player_ids_.size() >= capacity_;
@@ -62,6 +64,78 @@ private:
 	int32_t capacity_;
 };
 
+class ForbindendFile{
+public:
+	ForbindendFile(){}
+	ForbindendFile(std::string filename) : filename_(filename){}
+	virtual ~ForbindendFile(){ if (!data_) data_.close(); }
+
+	bool Init(){
+		std::ifstream conf(filename_ + ".conf", std::ios::in);
+		if (!conf){
+			return false;
+		}
+
+		std::string proprity;
+		conf >> unit_size_;
+		unit_size_ *= sizeof(char);
+		conf.close();
+
+		data_.open(filename_ + ".data_", std::ios::in | std::ios::binary);
+		if (!data_){
+			return false;
+		}
+
+		return true;
+	}
+
+	bool IsForbidended(std::string account){
+		long low_bd, up_bd, mid;
+		data_.seekg(0, std::ios::beg);
+		low_bd = data_.tellg();
+		data_.seekg(0, std::ios::end);
+		up_bd = data_.tellg() / unit_size_ - 1;
+
+		while (low_bd <= up_bd){
+			mid = (low_bd + up_bd) / 2;
+			data_.seekg(mid * unit_size_);
+			data_.get(buf, unit_size_);
+			switch (ForbidendedMatch(account)){
+			case small:
+				up_bd = mid - 1;
+				break;
+			case large:
+				low_bd = mid + 1;
+				break;
+			case equal:
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+public:
+	enum status { small, equal, large };
+
+protected:
+	enum status ForbidendedMatch(std::string account){
+		for (size_t i = 0; i < account.size(); ++i){
+			if (account[i] > buf[i])
+				return large;
+			else if (account[i] < buf[i])
+				return small;
+		}
+
+		return equal;
+	}
+
+private:
+	std::string filename_;
+	size_t unit_size_;
+	std::ifstream data_;
+	char buf[256];
+};
 
 class GameExampleServicePimpl {
 public:

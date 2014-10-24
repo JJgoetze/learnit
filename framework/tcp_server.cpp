@@ -254,8 +254,8 @@ int32_t TcpServer::ProcessConnnectionsKeepAlive()
 		if ((tcp_connection->last_keep_alive_time + 60 * 1) <= now)
 		{
 			//关闭连接
-			LOG(ERROR) << tcp_connection << " TcpConnection ,ProcessConnnectionsKeepAlive, Not Alive " ;
-			tcp_connection->Close(); 
+			//LOG(ERROR) << tcp_connection << " TcpConnection ,ProcessConnnectionsKeepAlive, Not Alive " ;
+			//tcp_connection->Close(); 
 		}
 	}
 }

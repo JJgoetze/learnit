@@ -99,6 +99,8 @@ PlayerRoom*  GameExampleServicePimpl::GetBestRoom(){
 
 //进入房间 
 int32_t  GameExampleServicePimpl::HandleEnterRoom(TcpConnection* conn, PacketTranscode& request){
+	LOG(INFO) << "enter sssssss" << conn->GetSessionId();
+
     Player* p = FindPlayerBySessionId(conn->GetSessionId());
     if (p != nullptr){
 
@@ -145,6 +147,8 @@ int32_t  GameExampleServicePimpl::HandleEnterRoom(TcpConnection* conn, PacketTra
 
 //离开房间
 int32_t  GameExampleServicePimpl::HandleLeaveRoom(TcpConnection* conn, PacketTranscode& request){
+	LOG(INFO) << "leave sssssss" << conn->GetSessionId();
+
     Player* p = FindPlayerBySessionId(conn->GetSessionId());
     if (p == nullptr){
         PacketTranscode packet;
@@ -192,6 +196,8 @@ int32_t  GameExampleServicePimpl::HandleLeaveRoom(TcpConnection* conn, PacketTra
 
 //查询金币前20的玩家信息
 int32_t  GameExampleServicePimpl::HandleQueryTop20ByMoney(TcpConnection* conn, PacketTranscode& request){
+	LOG(INFO) << "query sssssss" << conn->GetSessionId();
+
     int top_index = 0;
      
     QueryTop20ByMoneyResp   query_resp; 
@@ -233,7 +239,11 @@ int32_t  GameExampleServicePimpl::HandleQueryAccountBeForbidened(TcpConnection* 
     packet.SetOpcode(RampupOpCode::SMSG_QUERY_ACCOUNT_BE_FORBIDDENED_RESP);
    
     AccountForbidenResp resp; 
-
+	
+	ForbindendFile data("forbidended");
+	if (data.Init()){
+		resp.status = data.IsForbidended(req.account_name);
+	}
 
     resp.ToPacket(packet); 
 
