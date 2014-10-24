@@ -75,31 +75,49 @@ Player*  GameExampleServicePimpl::FindPlayerBySessionId(std::string session_id){
     }
 }
 
+//找到最合适的一个房间给玩家
 PlayerRoom*  GameExampleServicePimpl::GetBestRoom(){
-	int index = -1;
+	/*int index = -1;
 
 	int i = 0;
 	for (i; i < player_rooms.size(); ++i){
-		if ( !player_rooms[i]->IsFull()){
-			index = i;
-			break;
-		}
+	if ( !player_rooms[i]->IsFull()){
+	index = i;
+	break;
+	}
 	}
 
 	for (i; i < player_rooms.size(); ++i){
-		if (player_rooms[i]->GetRestCount() < player_rooms[index]->GetRestCount())
-			index = i;
+	if (player_rooms[i]->GetRestCount() < player_rooms[index]->GetRestCount())
+	index = i;
 	}
 
 	if (index > 0 && index < player_rooms.size())
-		return player_rooms[index];
+	return player_rooms[index];
 	else
+	return NULL;*/
+
+	PlayerRoom* retRoom = NULL;
+	if (player_rooms.empty())
+		return retRoom;
+
+	retRoom = *player_rooms.begin();
+	for (std::vector<PlayerRoom*>::iterator it = player_rooms.begin();
+		it != player_rooms.end(); ++it)
+	if ( !(*it)->IsFull()){
+		if (retRoom->IsFull() || (retRoom->GetRestCount() > (*it)->GetRestCount()) )
+			retRoom = *it;
+	}
+
+	if (retRoom->IsFull())
 		return NULL;
+	else
+		return retRoom;
 }
 
 //进入房间 
 int32_t  GameExampleServicePimpl::HandleEnterRoom(TcpConnection* conn, PacketTranscode& request){
-	LOG(INFO) << "enter sssssss" << conn->GetSessionId();
+	LOG(INFO) << " GameExampleServicePimpl::HandleEnterRoom, conn id is" << conn->GetSessionId();
 
     Player* p = FindPlayerBySessionId(conn->GetSessionId());
     if (p != nullptr){
@@ -124,13 +142,18 @@ int32_t  GameExampleServicePimpl::HandleEnterRoom(TcpConnection* conn, PacketTra
         session_player_map_[conn->GetSessionId()] = player;
 
 		PlayerRoom* player_room = GetBestRoom();
-		if (player_room != NULL)
+		if (player_room != NULL){
 			player_room->AssignPlayerId(player->account_id);
+			LOG(INFO) << "GameExampleServicePimpl::HandleEnterRoom, room assign ok & " << player_room->GetRestCount() << " room(s) is rest";
+		}
 		else{
-			player_room = new PlayerRoom;
+			player_room = new PlayerRoom();
 			player_rooms.push_back(player_room);
 			player_room->AssignPlayerId(player->account_id);
+			LOG(INFO) << "GameExampleServicePimpl::HandleEnterRoom, NO room availabe & assign a new room left " << player_room->GetRestCount() 
+				<< "is full?" <<player_room->IsFull();
 		}
+		LOG(INFO) << " GameExampleServicePimpl::HandleEnterRoom, " << player->account_id << " enter the room ";
 
         //发送给客户端进入房间成功
        PacketTranscode packet;
@@ -147,7 +170,7 @@ int32_t  GameExampleServicePimpl::HandleEnterRoom(TcpConnection* conn, PacketTra
 
 //离开房间
 int32_t  GameExampleServicePimpl::HandleLeaveRoom(TcpConnection* conn, PacketTranscode& request){
-	LOG(INFO) << "leave sssssss" << conn->GetSessionId();
+	LOG(INFO) << "GameExampleServicePimpl::HandleLeaveRoom, conn id is" << conn->GetSessionId();
 
     Player* p = FindPlayerBySessionId(conn->GetSessionId());
     if (p == nullptr){
@@ -165,10 +188,13 @@ int32_t  GameExampleServicePimpl::HandleLeaveRoom(TcpConnection* conn, PacketTra
 			it != player_rooms.end(); ){
 			if ((*it)->IsExistPlayerId(p->account_id)){
 				(*it)->RemovePlayerId(p->account_id);
+				LOG(INFO) << "GameExampleServicePimpl::HandleLeaveRoom, " << p->account_id << " leave the room & (" 
+					<< (*it)->GetRestCount() << ") room(s) left"; 
 
 				if ((*it)->IsEmpty()){
 					delete *it;
 					player_rooms.erase(it);
+					LOG(INFO) << "GameExampleServicePimpl::HandleLeaveRoom, room is empty & release this empty room";
 				}
 				break;
 			}
@@ -196,7 +222,7 @@ int32_t  GameExampleServicePimpl::HandleLeaveRoom(TcpConnection* conn, PacketTra
 
 //查询金币前20的玩家信息
 int32_t  GameExampleServicePimpl::HandleQueryTop20ByMoney(TcpConnection* conn, PacketTranscode& request){
-	LOG(INFO) << "query sssssss" << conn->GetSessionId();
+	LOG(INFO) << "GameExampleServicePimpl::HandleQueryTop20ByMoney, conn id is " << conn->GetSessionId();
 
     int top_index = 0;
      
@@ -219,6 +245,7 @@ int32_t  GameExampleServicePimpl::HandleQueryTop20ByMoney(TcpConnection* conn, P
 			break;
 		}
 	}
+	LOG(INFO) << "GameExampleServicePimpl::HandleQueryTop20ByMoney, querty top 20 OK";
 
     PacketTranscode packet;
     packet.SetOpcode(RampupOpCode::SMSG_QUERY_TOP20_RESP);
@@ -230,6 +257,8 @@ int32_t  GameExampleServicePimpl::HandleQueryTop20ByMoney(TcpConnection* conn, P
 
 //查询某个账号是否被封
 int32_t  GameExampleServicePimpl::HandleQueryAccountBeForbidened(TcpConnection* conn, PacketTranscode& request){
+	LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, conn id is " << conn->GetSessionId();
+
     AccountForbidenReq    req; 
     req.FromPacket(request); 
 
@@ -240,10 +269,18 @@ int32_t  GameExampleServicePimpl::HandleQueryAccountBeForbidened(TcpConnection* 
    
     AccountForbidenResp resp; 
 	
-	ForbindendFile data("forbidended");
-	if (data.Init()){
-		resp.status = data.IsForbidended(req.account_name);
+	ForbindendFile *data = ForbindendFile::GetInstance("forbidended");
+	if (data->IsInited()){
+		LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, Forbidended data access sucessfully";
+		resp.status = data->IsForbidended(req.account_name);
+		if (resp.status){
+			LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, find forbidended account ->" << req.account_name;
+		} else {
+		LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, " << req.account_name << "is NOT forbidended";
+		}
 	}
+	else
+		LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, Failed to access the Forbidended data";
 
     resp.ToPacket(packet); 
 

@@ -23,6 +23,7 @@ GameExampleService::~GameExampleService() {
 bool GameExampleService::Reload(rapidjson::Value& config) 
 {
     pimpl_ = new GameExampleServicePimpl(config); 	
+	pimpl_->Init();
 	return true;
 }
 

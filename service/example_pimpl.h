@@ -66,28 +66,17 @@ private:
 
 class ForbindendFile{
 public:
-	ForbindendFile(){}
-	ForbindendFile(std::string filename) : filename_(filename){}
-	virtual ~ForbindendFile(){ if (!data_) data_.close(); }
-
-	bool Init(){
-		std::ifstream conf(filename_ + ".conf", std::ios::in);
-		if (!conf){
-			return false;
-		}
-
-		std::string proprity;
-		conf >> unit_size_;
-		unit_size_ *= sizeof(char);
-		conf.close();
-
-		data_.open(filename_ + ".data_", std::ios::in | std::ios::binary);
-		if (!data_){
-			return false;
-		}
-
-		return true;
+	/*static ForbindendFile * GetInstance(){
+		static ForbindendFile t;
+		return &t;
+	}*/
+	
+	static ForbindendFile * GetInstance(const std::string filename){
+		static ForbindendFile t(filename);
+		return &t;
 	}
+
+	virtual ~ForbindendFile(){ if (!data_) data_.close(); }
 
 	bool IsForbidended(std::string account){
 		long low_bd, up_bd, mid;
@@ -115,6 +104,10 @@ public:
 		return false;
 	}
 
+	bool IsInited(){
+		return is_inited_;
+	}
+
 public:
 	enum status { small, equal, large };
 
@@ -131,9 +124,33 @@ protected:
 	}
 
 private:
+	//ForbindendFile():filename_("forbidended"){ if (Init()) is_inited_ = true; else is_inited_ = false; }
+	ForbindendFile(std::string filename) : filename_(filename){ if (Init()) is_inited_ = true; else is_inited_ = false; }
+	
+	bool Init(){
+		std::ifstream conf(filename_ + ".conf", std::ios::in);
+		if (!conf){
+			return false;
+		}
+
+		std::string proprity;
+		conf >> unit_size_;
+		unit_size_ *= sizeof(char);
+		conf.close();
+
+		data_.open(filename_ + ".data", std::ios::in | std::ios::binary);
+		if (!data_){
+			return false;
+		}
+
+		return true;
+	}
+
+private:
 	std::string filename_;
 	size_t unit_size_;
 	std::ifstream data_;
+	bool is_inited_;
 	char buf[256];
 };
 
