@@ -144,14 +144,12 @@ int32_t  GameExampleServicePimpl::HandleEnterRoom(TcpConnection* conn, PacketTra
 		PlayerRoom* player_room = GetBestRoom();
 		if (player_room != NULL){
 			player_room->AssignPlayerId(player->account_id);
-			LOG(INFO) << "GameExampleServicePimpl::HandleEnterRoom, room assign ok & " << player_room->GetRestCount() << " room(s) is rest";
-		}
-		else{
+			LOG(INFO) << "GameExampleServicePimpl::HandleEnterRoom, room assign to player ok & " << player_room->GetRestCount() << " set(s) is rest";
+		} else {
 			player_room = new PlayerRoom();
 			player_rooms.push_back(player_room);
 			player_room->AssignPlayerId(player->account_id);
-			LOG(INFO) << "GameExampleServicePimpl::HandleEnterRoom, NO room availabe & assign a new room left " << player_room->GetRestCount() 
-				<< "is full?" <<player_room->IsFull();
+			LOG(INFO) << "GameExampleServicePimpl::HandleEnterRoom, NO room availabe & assign a new room left " << player_room->GetRestCount();
 		}
 		LOG(INFO) << " GameExampleServicePimpl::HandleEnterRoom, " << player->account_id << " enter the room ";
 
@@ -189,7 +187,7 @@ int32_t  GameExampleServicePimpl::HandleLeaveRoom(TcpConnection* conn, PacketTra
 			if ((*it)->IsExistPlayerId(p->account_id)){
 				(*it)->RemovePlayerId(p->account_id);
 				LOG(INFO) << "GameExampleServicePimpl::HandleLeaveRoom, " << p->account_id << " leave the room & (" 
-					<< (*it)->GetRestCount() << ") room(s) left"; 
+					<< (*it)->GetRestCount() << ") set(s) left"; 
 
 				if ((*it)->IsEmpty()){
 					delete *it;
@@ -197,8 +195,7 @@ int32_t  GameExampleServicePimpl::HandleLeaveRoom(TcpConnection* conn, PacketTra
 					LOG(INFO) << "GameExampleServicePimpl::HandleLeaveRoom, room is empty & release this empty room";
 				}
 				break;
-			}
-			else {
+			} else {
 				++it;
 			}
 		}
@@ -271,16 +268,16 @@ int32_t  GameExampleServicePimpl::HandleQueryAccountBeForbidened(TcpConnection* 
 	
 	ForbindendFile *data = ForbindendFile::GetInstance("forbidended");
 	if (data->IsInited()){
-		LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, Forbidended data access sucessfully";
+		LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, forbidended data access sucessfully";
 		resp.status = data->IsForbidended(req.account_name);
 		if (resp.status){
 			LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, find forbidended account ->" << req.account_name;
 		} else {
-		LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, " << req.account_name << "is NOT forbidended";
+			LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, " << req.account_name << "is NOT forbidended";
 		}
 	}
 	else
-		LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, Failed to access the Forbidended data";
+		LOG(INFO) << "GameExampleServicePimpl::HandleQueryAccountBeForbidened, FAILED to access the Forbidended data";
 
     resp.ToPacket(packet); 
 
@@ -305,8 +302,7 @@ void GameExampleServicePimpl::InjectDependency(const std::string& name, Service*
 int32_t GameExampleServicePimpl::OnConnClosed(TcpConnection* conn) {
     Player* p = FindPlayerBySessionId(conn->GetSessionId());
     if (p == nullptr){
-    }
-    else {
+    } else {
         session_player_map_.erase(conn->GetSessionId());
         delete p;
     }

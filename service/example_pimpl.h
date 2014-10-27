@@ -71,13 +71,14 @@ public:
 		return &t;
 	}*/
 	
-	static ForbindendFile * GetInstance(const std::string filename){
+	static ForbindendFile * GetInstance(const std::string &filename){
 		static ForbindendFile t(filename);
 		return &t;
 	}
 
 	virtual ~ForbindendFile(){ if (!data_) data_.close(); }
 
+	//判断指定账号是否被封（false 没被封，ture被封）
 	bool IsForbidended(std::string account){
 		long low_bd, up_bd, mid;
 		data_.seekg(0, std::ios::beg);
@@ -104,6 +105,7 @@ public:
 		return false;
 	}
 
+	//返回文件是否被正确初始化
 	bool IsInited(){
 		return is_inited_;
 	}
@@ -112,6 +114,7 @@ public:
 	enum status { small, equal, large };
 
 protected:
+	//账号比对，返回字典序比较结果
 	enum status ForbidendedMatch(std::string account){
 		for (size_t i = 0; i < account.size(); ++i){
 			if (account[i] > buf[i])
@@ -127,13 +130,13 @@ private:
 	//ForbindendFile():filename_("forbidended"){ if (Init()) is_inited_ = true; else is_inited_ = false; }
 	ForbindendFile(std::string filename) : filename_(filename){ if (Init()) is_inited_ = true; else is_inited_ = false; }
 	
+	//文件初始化
 	bool Init(){
 		std::ifstream conf(filename_ + ".conf", std::ios::in);
 		if (!conf){
 			return false;
 		}
 
-		std::string proprity;
 		conf >> unit_size_;
 		unit_size_ *= sizeof(char);
 		conf.close();
@@ -147,10 +150,15 @@ private:
 	}
 
 private:
+	//被封账号文件的路径和名称
 	std::string filename_;
+	//单位记录的内存大小
 	size_t unit_size_;
+	//文件的数据块
 	std::ifstream data_;
+	//类是否做过初始化处理
 	bool is_inited_;
+	//缓冲空间
 	char buf[256];
 };
 
@@ -210,4 +218,4 @@ private:
 };
 
 
-#endif  // SERVICE_RAMP_UP_PIMPL_H_
+#endif   SERVICE_RAMP_UP_PIMPL_H_
