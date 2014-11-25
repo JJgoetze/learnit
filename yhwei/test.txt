@@ -1,0 +1,2 @@
+should use   git push origin master HEAD:refs/for/master
+instead of   git push origin master
