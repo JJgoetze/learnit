@@ -1,2 +1,7 @@
 should use   git push origin HEAD:refs/for/master
+
 instead of   git push origin master
+
+instead of   git push origin master
+add 
+
