@@ -40,10 +40,56 @@ int SumFibonacciBelow4000000()
 	cout<<count<<endl;
 	return sum;
 }
+
+//判断是否是质数
+bool IsPrime(long long num)
+{
+	if(num<0)
+		return false;
+	if(num==1||num==2)
+		return true;
+	for(long long i=2;i*i<=num;i++)
+		if(num%i==0)
+			return false;
+	return true;
+
+}
+
+
+
+//找出一个数的最大质因子
+int FindLargestPrimeFactor(long long num)
+{
+	long long i=2;
+	long long pre_i=2;
+	int count=0;
+	for(;i<num;i++)
+	{
+		if(num%i==0)
+		{
+			if(IsPrime(i))
+			{
+				if(i>pre_i)
+					pre_i=i;
+				
+			}
+			num=num/i;
+			i=2;
+			
+		}
+		count++;
+
+	}
+	cout<<count<<endl;
+	return num;
+
+
+}
 int _tmain(int argc, _TCHAR* argv[])
 {
 	cout<<SumBelow100()<<endl;
 	cout<<SumFibonacciBelow4000000()<<endl;
+	cout<<FindLargestPrimeFactor(600851475143)<<endl;
 	system("pause");
 	return 0;
 }
